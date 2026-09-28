@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"diploma/course-tracker/internal/service"
-	"diploma/course-tracker/internal/storage"
+	"course-tracker/internal/service"
+	"course-tracker/internal/storage"
 )
 
 const defaultDataFile = "data/courses.json"

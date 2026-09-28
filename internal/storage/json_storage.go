@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"diploma/course-tracker/internal/models"
+	"course-tracker/internal/models"
 )
 
 // Store describes the storage contract used by the service layer.

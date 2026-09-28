@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"diploma/course-tracker/internal/models"
+	"course-tracker/internal/models"
 )
 
 type testStore struct {

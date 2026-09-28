@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"diploma/course-tracker/internal/models"
-	"diploma/course-tracker/internal/storage"
+	"course-tracker/internal/models"
+	"course-tracker/internal/storage"
 )
 
 // Stats contains summary information about courses.
