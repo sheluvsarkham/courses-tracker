@@ -1,0 +1,33 @@
+# Go build artifacts
+/bin/
+/dist/
+/*.exe
+/*.dll
+/*.so
+/*.dylib
+*.test
+*.out
+coverage.out
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.suo
+*.user
+
+# local env and temp files
+.env
+.env.*
+tmp/
+temp/
+*.tmp
+*.log
+
+# Go module cache is usually managed by the toolchain and not committed
+# but keeping local install outputs out of VCS helps.
+
+# keep the project data file tracked if you want sample data in the repo
+# data/courses.json

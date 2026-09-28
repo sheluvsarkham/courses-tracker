@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "title": "дизайн",
+    "description": "дизайн",
+    "category": "дизайн",
+    "level": "Beginner",
+    "duration": 15,
+    "completed": false
+  }
+]
