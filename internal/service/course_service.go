@@ -10,9 +10,9 @@ import (
 
 // Stats contains summary information about courses.
 type Stats struct {
-	Total      int
-	Completed  int
-	InProgress int
+	Total      int `json:"total"`
+	Completed  int `json:"completed"`
+	InProgress int `json:"inProgress"`
 }
 
 type CourseService struct {

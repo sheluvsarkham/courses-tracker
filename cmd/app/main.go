@@ -1,184 +1,82 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
+	"embed"
+	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
-	"course-tracker/internal/service"
-	"course-tracker/internal/storage"
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
-const defaultDataFile = "data/courses.json"
+//go:embed all:frontend/dist
+var frontend embed.FS
 
 func main() {
-	dataPath := filepath.Join(".", defaultDataFile)
-	store := storage.NewJSONStore(dataPath)
-	svc := service.NewCourseService(store)
+	dataPath, err := courseDataPath()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		printMenu()
-		choice, err := readInt(reader, "Выберите пункт меню")
-		if err != nil {
-			fmt.Println("Ошибка: введите число.")
-			continue
+	app, err := NewApp(filepath.Dir(dataPath))
+	if err != nil {
+		log.Fatal(err)
+	}
+	assets, err := fs.Sub(frontend, "frontend/dist")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := wails.Run(&options.App{
+		Title:       "Трекер курсов",
+		Width:       1180,
+		Height:      780,
+		MinWidth:    900,
+		MinHeight:   620,
+		AssetServer: &assetserver.Options{Assets: assets},
+		BackgroundColour: &options.RGBA{
+			R: 247,
+			G: 248,
+			B: 245,
+			A: 1,
+		},
+		Bind: []interface{}{app},
+	}); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func courseDataPath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	configPath := filepath.Join(configDir, "CourseTracker", "courses.json")
+	if _, err := os.Stat(configPath); err == nil {
+		return configPath, nil
+	}
+
+	legacyPaths := []string{filepath.Join("data", "courses.json")}
+	if executable, err := os.Executable(); err == nil {
+		legacyPaths = append(legacyPaths, filepath.Join(filepath.Dir(executable), "data", "courses.json"))
+	}
+	for _, legacyPath := range legacyPaths {
+		data, err := os.ReadFile(legacyPath)
+		if err == nil {
+			if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+				return "", err
+			}
+			if err := os.WriteFile(configPath, data, 0o644); err != nil {
+				return "", err
+			}
+			return configPath, nil
 		}
-
-		switch choice {
-		case 1:
-			addCourseInteractive(svc, reader)
-		case 2:
-			listCoursesInteractive(svc)
-		case 3:
-			completeCourseInteractive(svc, reader)
-		case 4:
-			deleteCourseInteractive(svc, reader)
-		case 5:
-			statsInteractive(svc)
-		case 0:
-			fmt.Println("До свидания!")
-			return
-		default:
-			fmt.Println("Такого пункта нет. Попробуйте ещё раз.")
+		if !os.IsNotExist(err) {
+			return "", err
 		}
-		fmt.Println()
 	}
-}
-
-func printMenu() {
-	fmt.Println("==== Трекер курсов ====")
-	fmt.Println("1. Добавить курс")
-	fmt.Println("2. Показать список курсов")
-	fmt.Println("3. Отметить курс завершённым")
-	fmt.Println("4. Удалить курс")
-	fmt.Println("5. Показать статистику")
-	fmt.Println("0. Выход")
-}
-
-func addCourseInteractive(svc *service.CourseService, reader *bufio.Reader) {
-	fmt.Println("\nДобавление нового курса")
-	title := readString(reader, "Введите название курса: ")
-	description := readString(reader, "Введите описание: ")
-	category := readString(reader, "Введите категорию: ")
-	level := readString(reader, "Введите уровень (Новичок/Средний/Продвинутый): ")
-	duration, err := readInt(reader, "Введите длительность в часах: ")
-	if err != nil {
-		fmt.Println("Ошибка: длительность должна быть числом.")
-		return
-	}
-
-	course, err := svc.AddCourse(title, description, category, level, duration)
-	if err != nil {
-		fmt.Println("Не удалось добавить курс:", err)
-		return
-	}
-
-	fmt.Printf("Курс добавлен: ID=%d, Название=%s\n", course.ID, course.Title)
-}
-
-func listCoursesInteractive(svc *service.CourseService) {
-	courses, err := svc.ListCourses()
-	if err != nil {
-		fmt.Println("Ошибка при загрузке курсов:", err)
-		return
-	}
-
-	if len(courses) == 0 {
-		fmt.Println("Список курсов пуст.")
-		return
-	}
-
-	fmt.Println("\nСписок курсов:")
-	for _, course := range courses {
-		status := "В процессе"
-		if course.Completed {
-			status = "Завершён"
-		}
-		fmt.Printf("ID=%d | %s | %s | %s | %dh | %s\n", course.ID, course.Title, course.Category, course.Level, course.Duration, status)
-	}
-}
-
-func completeCourseInteractive(svc *service.CourseService, reader *bufio.Reader) {
-	courses, err := svc.ListCourses()
-	if err != nil {
-		fmt.Println("Ошибка при загрузке курсов:", err)
-		return
-	}
-	if len(courses) == 0 {
-		fmt.Println("Нет курсов для отметки.")
-		return
-	}
-
-	listCoursesInteractive(svc)
-	id, err := readInt(reader, "Введите ID курса для отметки как завершённого: ")
-	if err != nil {
-		fmt.Println("Ошибка: ID должен быть числом.")
-		return
-	}
-
-	course, err := svc.UpdateCompletion(id, true)
-	if err != nil {
-		fmt.Println("Ошибка:", err)
-		return
-	}
-	fmt.Printf("Курс отмечен как завершённый: %s\n", course.Title)
-}
-
-func deleteCourseInteractive(svc *service.CourseService, reader *bufio.Reader) {
-	courses, err := svc.ListCourses()
-	if err != nil {
-		fmt.Println("Ошибка при загрузке курсов:", err)
-		return
-	}
-	if len(courses) == 0 {
-		fmt.Println("Нет курсов для удаления.")
-		return
-	}
-
-	listCoursesInteractive(svc)
-	id, err := readInt(reader, "Введите ID курса для удаления: ")
-	if err != nil {
-		fmt.Println("Ошибка: ID должен быть числом.")
-		return
-	}
-
-	if err = svc.DeleteCourse(id); err != nil {
-		fmt.Println("Ошибка:", err)
-		return
-	}
-	fmt.Printf("Курс с ID=%d удалён.\n", id)
-}
-
-func statsInteractive(svc *service.CourseService) {
-	stats, err := svc.GetStats()
-	if err != nil {
-		fmt.Println("Ошибка при расчёте статистики:", err)
-		return
-	}
-
-	fmt.Println("\nСтатистика:")
-	fmt.Printf("Всего курсов: %d\n", stats.Total)
-	fmt.Printf("Завершено: %d\n", stats.Completed)
-	fmt.Printf("В процессе: %d\n", stats.InProgress)
-}
-
-func readString(reader *bufio.Reader, prompt string) string {
-	fmt.Print(prompt)
-	value, _ := reader.ReadString('\n')
-	return strings.TrimSpace(value)
-}
-
-func readInt(reader *bufio.Reader, prompt string) (int, error) {
-	fmt.Print(prompt)
-	value, err := reader.ReadString('\n')
-	if err != nil {
-		return 0, err
-	}
-
-	value = strings.TrimSpace(value)
-	return strconv.Atoi(value)
+	return configPath, nil
 }

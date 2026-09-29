@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f8f5">
+  <title>Трекер курсов</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202c29;
+      --muted: #78837e;
+      --line: #e5e9e3;
+      --paper: #fff;
+      --canvas: #f7f8f5;
+      --green: #23745a;
+      --green-soft: #e8f2ec;
+      --blue: #456f91;
+      --blue-soft: #eaf0f5;
+      --amber: #aa7335;
+      --amber-soft: #f7f0e6;
+      --red: #a64e49;
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; min-width: 740px; min-height: 100vh; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
+    .sidebar { display: flex; flex-direction: column; padding: 29px 18px 20px; background: #eef2ed; border-right: 1px solid #e1e7e0; }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 38px; }
+    .brand-mark { display: grid; place-items: center; width: 37px; height: 37px; border-radius: 11px; background: var(--green); color: white; }
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-name { font-size: 15px; font-weight: 700; letter-spacing: 0; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .nav-label { padding: 0 12px 9px; color: #939c96; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    .nav-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 12px; border: 0; border-radius: 7px; background: transparent; color: #65716b; text-align: left; font-size: 13px; }
+    .nav-item svg { width: 17px; height: 17px; }
+    .nav-item.active { background: #dfeae1; color: #205f4b; font-weight: 650; }
+    .sidebar-bottom { margin-top: auto; padding: 15px 11px 0; border-top: 1px solid #dfe5de; color: #87918a; font-size: 11px; line-height: 1.6; }
+    main { width: min(1120px, 100%); margin: 0 auto; padding: 37px 44px 48px; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; }
+    h1 { margin: 0; font-size: 27px; line-height: 1.2; font-weight: 680; letter-spacing: 0; }
+    .subtitle { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+    .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 41px; padding: 0 15px; border: 0; border-radius: 7px; background: var(--green); color: white; font-weight: 650; font-size: 12px; box-shadow: 0 2px 3px #174a3615; }
+    .primary:hover { background: #1b634b; }
+    .primary svg { width: 16px; height: 16px; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-bottom: 27px; }
+    .stat { position: relative; overflow: hidden; min-height: 105px; padding: 17px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+    .stat::after { position: absolute; right: 0; top: 0; width: 3px; height: 100%; background: var(--tone); content: ""; }
+    .stat-label { color: var(--muted); font-size: 11px; font-weight: 600; }
+    .stat-value { margin-top: 11px; font-size: 26px; font-weight: 700; line-height: 1; }
+    .stat-total { --tone: var(--blue); }
+    .stat-active { --tone: var(--amber); }
+    .stat-done { --tone: var(--green); }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 15px; }
+    .filters { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: #f0f2ee; }
+    .filter { padding: 7px 11px; border: 0; border-radius: 6px; background: transparent; color: #738078; font-size: 11px; }
+    .filter.active { background: white; color: var(--ink); box-shadow: 0 1px 3px #1c312514; font-weight: 650; }
+    .search { position: relative; width: min(250px, 42%); }
+    .search svg { position: absolute; top: 10px; left: 11px; width: 15px; height: 15px; color: #849089; pointer-events: none; }
+    .search input { width: 100%; height: 36px; padding: 0 12px 0 34px; border: 1px solid var(--line); border-radius: 7px; outline: none; background: white; font-size: 11px; }
+    .search input:focus, .field input:focus, .field select:focus, .field textarea:focus { border-color: #85ae98; box-shadow: 0 0 0 3px #23745a14; }
+    .course-list { display: grid; gap: 10px; }
+    .course { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 22px; padding: 17px 19px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); animation: rise .28s both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .course-title { overflow: hidden; margin: 0; font-size: 14px; font-weight: 670; text-overflow: ellipsis; white-space: nowrap; }
+    .course-description { overflow: hidden; max-width: 690px; margin: 6px 0 10px; color: var(--muted); font-size: 11px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+    .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .tag { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 4px; background: var(--blue-soft); color: var(--blue); font-size: 10px; font-weight: 600; }
+    .tag.level { background: var(--amber-soft); color: var(--amber); }
+    .duration { display: inline-flex; align-items: center; gap: 5px; color: #7b8580; font-size: 10px; }
+    .duration svg { width: 13px; height: 13px; }
+    .course-actions { display: flex; align-items: center; gap: 9px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; min-width: 103px; color: #a16e30; font-size: 10px; font-weight: 600; white-space: nowrap; }
+    .status::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+    .status.done { color: var(--green); }
+    .icon-button { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--line); border-radius: 6px; background: white; color: #69756e; }
+    .icon-button:hover { border-color: #c9d5cd; background: #f6f8f5; color: var(--green); }
+    .icon-button.delete:hover { border-color: #ebcdca; background: #fbf2f1; color: var(--red); }
+    .icon-button svg { width: 15px; height: 15px; }
+    .empty { display: none; padding: 61px 20px; border: 1px dashed #d6ddd6; border-radius: 8px; text-align: center; }
+    .empty-icon { display: grid; place-items: center; width: 45px; height: 45px; margin: 0 auto 13px; border-radius: 12px; background: var(--green-soft); color: var(--green); }
+    .empty-icon svg { width: 22px; height: 22px; }
+    .empty h2 { margin: 0; font-size: 15px; }
+    .empty p { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+    dialog { width: min(480px, calc(100vw - 36px)); padding: 0; border: 1px solid #e4e9e2; border-radius: 10px; background: white; color: var(--ink); box-shadow: 0 22px 70px #1d322c30; }
+    dialog::backdrop { background: #18252170; backdrop-filter: blur(2px); }
+    .dialog-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 24px 16px; border-bottom: 1px solid var(--line); }
+    .dialog-head h2 { margin: 0; font-size: 17px; }
+    .dialog-head p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+    .close { border: 0; background: none; color: #78847d; font-size: 21px; line-height: 1; }
+    form { padding: 18px 24px 22px; }
+    .field { display: grid; gap: 6px; margin-bottom: 13px; }
+    .field label { color: #58645d; font-size: 11px; font-weight: 650; }
+    .field input, .field select, .field textarea { width: 100%; min-height: 37px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; outline: none; background: white; color: var(--ink); font-size: 12px; }
+    .field textarea { min-height: 67px; resize: vertical; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .secondary { min-height: 39px; padding: 0 13px; border: 1px solid var(--line); border-radius: 7px; background: white; color: #58645d; font-size: 11px; font-weight: 600; }
+    .danger { min-height: 39px; padding: 0 13px; border: 1px solid #a64e49; border-radius: 7px; background: #a64e49; color: white; font-size: 11px; font-weight: 650; }
+    .danger:hover { border-color: #8e3f3b; background: #8e3f3b; }
+    .auth-screen { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(420px, .95fr); min-height: 100vh; background: #fbfcfa; }
+    .auth-side { position: relative; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; padding: 42px clamp(32px, 6vw, 86px); background: #eaf0e9; }
+    .auth-side::after { position: absolute; inset: 0; background-image: repeating-linear-gradient(135deg, transparent 0 42px, #ffffff28 43px 44px); content: ""; pointer-events: none; }
+    .auth-brand, .auth-copy, .auth-side-foot { position: relative; z-index: 1; }
+    .auth-brand { display: flex; align-items: center; gap: 12px; }
+    .auth-copy { max-width: 440px; margin: auto 0; padding: 55px 0; }
+    .auth-kicker { margin: 0 0 15px; color: var(--green); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .auth-copy h1 { max-width: 400px; font-size: 38px; line-height: 1.12; }
+    .auth-copy p { max-width: 355px; margin: 15px 0 0; color: #68776e; font-size: 14px; line-height: 1.7; }
+    .auth-side-foot { color: #819087; font-size: 11px; }
+    .auth-main { display: grid; place-items: center; padding: 44px 34px; }
+    .auth-content { width: min(370px, 100%); }
+    .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 32px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #f0f2ee; }
+    .auth-tab { min-height: 35px; border: 0; border-radius: 5px; background: transparent; color: #768078; font-size: 11px; }
+    .auth-tab.active { background: white; color: var(--ink); box-shadow: 0 1px 3px #1c312514; font-weight: 650; }
+    .auth-heading { margin: 0; font-size: 25px; font-weight: 680; }
+    .auth-subtitle { margin: 8px 0 25px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .auth-form { padding: 0; }
+    .auth-field { margin-bottom: 15px; }
+    .auth-field input { min-height: 42px; }
+    .auth-hint { margin: -6px 0 15px; color: #87918b; font-size: 10px; line-height: 1.5; }
+    .auth-error { min-height: 18px; margin: -2px 0 9px; color: var(--red); font-size: 11px; line-height: 1.5; }
+    .auth-submit { width: 100%; min-height: 43px; }
+    .auth-local-note { margin: 19px 0 0; color: #87918b; font-size: 10px; line-height: 1.6; text-align: center; }
+    .account-controls { display: flex; align-items: center; gap: 12px; }
+    .account-name { color: #65716b; font-size: 11px; font-weight: 600; }
+    .logout-button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: white; color: #65716b; font-size: 11px; }
+    .logout-button:hover { border-color: #c9d5cd; color: var(--green); }
+    .logout-button svg { width: 15px; height: 15px; }
+    .toast { position: fixed; right: 24px; bottom: 22px; max-width: min(420px, calc(100vw - 48px)); padding: 11px 15px; border-radius: 7px; background: #263831; color: white; font-size: 12px; box-shadow: 0 8px 25px #1727202b; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 980px) { main { padding: 30px 25px; } .shell { grid-template-columns: 205px minmax(0, 1fr); } .course { gap: 10px; padding: 15px; } .status { min-width: auto; } }
+    @media (max-width: 800px) { body { min-width: 360px; } .shell { grid-template-columns: 64px minmax(0, 1fr); } .sidebar { align-items: center; padding: 20px 8px; } .brand { padding: 0 0 32px; } .brand-copy, .nav-label, .nav-item span, .sidebar-bottom { display: none; } .nav-item { justify-content: center; padding: 12px 0; } main { padding: 25px 16px; } .topline { align-items: flex-start; } .stats { gap: 7px; } .stat { min-height: 85px; padding: 13px 10px; } .stat-label { font-size: 9px; } .stat-value { font-size: 22px; } .toolbar { align-items: flex-start; flex-direction: column-reverse; } .search { width: 100%; } .course { grid-template-columns: 1fr; gap: 12px; } .course-actions { justify-content: flex-start; } h1 { font-size: 22px; } .auth-screen { grid-template-columns: 1fr; } .auth-side { display: none; } .auth-main { min-height: 100vh; padding: 28px 22px; } .account-controls { gap: 6px; } .account-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; } .logout-button { padding: 0 7px; } }
+  </style>
+</head>
+<body>
+  <div class="auth-screen" id="auth-screen">
+    <section class="auth-side" aria-label="Учебный план">
+      <div class="auth-brand"><div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/><path d="m9 10 2 2 4-4"/></svg></div><div><div class="brand-name">Учебный план</div><div class="brand-caption">личный трекер</div></div></div>
+      <div class="auth-copy"><p class="auth-kicker">Ваше пространство для обучения</p><h1>Большие цели складываются из маленьких шагов.</h1><p>Сохраняйте курсы, отмечайте прогресс и возвращайтесь к обучению в своём ритме.</p></div>
+      <div class="auth-side-foot">Локальный доступ. Ваши данные остаются на этом компьютере.</div>
+    </section>
+    <section class="auth-main">
+      <div class="auth-content">
+        <div class="auth-tabs" role="tablist" aria-label="Аккаунт"><button class="auth-tab active" type="button" data-auth-mode="login" role="tab" aria-selected="true">Вход</button><button class="auth-tab" type="button" data-auth-mode="register" role="tab" aria-selected="false">Регистрация</button></div>
+        <h1 class="auth-heading" id="auth-title">С возвращением</h1>
+        <p class="auth-subtitle" id="auth-subtitle">Войдите, чтобы открыть свою библиотеку курсов.</p>
+        <form class="auth-form" id="auth-form">
+          <div class="field auth-field"><label for="auth-username">Имя пользователя</label><input id="auth-username" name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_.-]{3,32}" required placeholder="Например, student_01"></div>
+          <div class="field auth-field"><label for="auth-password">Пароль</label><input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" required placeholder="Не менее 8 символов"></div>
+          <div class="field auth-field" id="confirm-field" hidden><label for="auth-confirm">Повторите пароль</label><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Повторите пароль"></div>
+          <p class="auth-hint" id="auth-hint" hidden>Имя: 3–32 латинских символа, цифры, точка, дефис или подчёркивание. Пароль: 8–72 байта.</p>
+          <div class="auth-error" id="auth-error" role="alert" aria-live="polite"></div>
+          <button class="primary auth-submit" id="auth-submit" type="submit">Войти</button>
+        </form>
+        <p class="auth-local-note">Аккаунты и курсы хранятся локально на этом компьютере.</p>
+      </div>
+    </section>
+  </div>
+  <div class="shell" id="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/><path d="m9 10 2 2 4-4"/></svg></div>
+        <div class="brand-copy"><div class="brand-name">Учебный план</div><div class="brand-caption">личный трекер</div></div>
+      </div>
+      <div class="nav-label">Библиотека</div>
+      <button class="nav-item active" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v18H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M4 17h16M8 7h7M8 11h7"/></svg><span>Мои курсы</span></button>
+      <div class="sidebar-bottom">Ваш темп. Ваш маршрут.<br>Учитесь с удовольствием.</div>
+    </aside>
+    <main>
+      <header class="topline">
+        <div><h1>Мои курсы</h1><p class="subtitle">Ваш прогресс в одном месте</p></div>
+        <div class="account-controls"><span class="account-name" id="account-name"></span><button class="logout-button" id="logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>Выйти</button><button class="primary" id="open-form" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить курс</button></div>
+      </header>
+      <section class="stats" aria-label="Статистика курсов">
+        <article class="stat stat-total"><div class="stat-label">Всего курсов</div><div class="stat-value" id="stat-total">0</div></article>
+        <article class="stat stat-active"><div class="stat-label">В процессе</div><div class="stat-value" id="stat-active">0</div></article>
+        <article class="stat stat-done"><div class="stat-label">Завершено</div><div class="stat-value" id="stat-done">0</div></article>
+      </section>
+      <section class="toolbar" aria-label="Поиск и фильтры">
+        <div class="filters">
+          <button class="filter active" type="button" data-filter="all">Все</button>
+          <button class="filter" type="button" data-filter="active">В процессе</button>
+          <button class="filter" type="button" data-filter="done">Завершённые</button>
+        </div>
+        <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="search" type="search" placeholder="Найти курс..." aria-label="Найти курс"></label>
+      </section>
+      <section class="course-list" id="course-list" aria-live="polite"></section>
+      <section class="empty" id="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v18H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M4 17h16M8 7h7"/></svg></div><h2 id="empty-title">Пока нет курсов</h2><p id="empty-copy">Добавьте первый курс, чтобы начать свой учебный план.</p></section>
+    </main>
+  </div>
+  <dialog id="course-dialog">
+    <div class="dialog-head"><div><h2>Новый курс</h2><p>Добавьте курс в свою учебную библиотеку</p></div><button class="close" id="close-form" type="button" aria-label="Закрыть">×</button></div>
+    <form id="course-form">
+      <div class="field"><label for="title">Название</label><input id="title" name="title" maxlength="100" required placeholder="Например, Основы Go"></div>
+      <div class="field"><label for="description">Описание</label><textarea id="description" name="description" maxlength="500" required placeholder="Чему вы научитесь?"></textarea></div>
+      <div class="field-row"><div class="field"><label for="category">Категория</label><input id="category" name="category" maxlength="40" required placeholder="Разработка"></div><div class="field"><label for="level">Уровень</label><select id="level" name="level"><option>Новичок</option><option>Средний</option><option>Продвинутый</option></select></div></div>
+      <div class="field"><label for="duration">Длительность, часов</label><input id="duration" name="duration" type="number" min="1" max="10000" required placeholder="12"></div>
+      <div class="form-actions"><button class="secondary" id="cancel-form" type="button">Отмена</button><button class="primary" type="submit">Сохранить курс</button></div>
+    </form>
+  </dialog>
+  <dialog id="delete-dialog" aria-labelledby="delete-title">
+    <div class="dialog-head"><div><h2 id="delete-title">Удалить курс?</h2><p id="delete-copy"></p></div><button class="close" id="close-delete" type="button" aria-label="Отмена">×</button></div>
+    <div class="form-actions" style="padding: 0 24px 22px"><button class="secondary" id="cancel-delete" type="button">Отмена</button><button class="danger" id="confirm-delete" type="button">Удалить</button></div>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script>
+    const api = window.go.main.App;
+    const state = { courses: [], filter: 'all', query: '' };
+    const list = document.getElementById('course-list');
+    const empty = document.getElementById('empty-state');
+    const dialog = document.getElementById('course-dialog');
+    const deleteDialog = document.getElementById('delete-dialog');
+    let pendingDeleteID = null;
+    let pendingDeleteUsername = null;
+    let authMode = 'login';
+    let activeUsername = null;
+    let viewRevision = 0;
+    let toastTimer;
+
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function showAuth(mode) {
+      activeUsername = null;
+      viewRevision++;
+      state.courses = [];
+      state.filter = 'all';
+      state.query = '';
+      document.getElementById('search').value = '';
+      document.querySelectorAll('.filter').forEach(button => button.classList.toggle('active', button.dataset.filter === 'all'));
+      render();
+      authMode = mode;
+      document.getElementById('auth-screen').hidden = false;
+      document.getElementById('app-shell').hidden = true;
+      document.getElementById('auth-form').reset();
+      document.getElementById('auth-error').textContent = '';
+      document.getElementById('auth-title').textContent = mode === 'register' ? 'Создать аккаунт' : 'С возвращением';
+      document.getElementById('auth-subtitle').textContent = mode === 'register'
+        ? 'Создайте локальный аккаунт, чтобы сохранить свой учебный план.'
+        : 'Войдите, чтобы открыть свою библиотеку курсов.';
+      document.getElementById('auth-submit').textContent = mode === 'register' ? 'Зарегистрироваться' : 'Войти';
+      document.getElementById('confirm-field').hidden = mode !== 'register';
+      document.getElementById('auth-confirm').required = mode === 'register';
+      document.getElementById('auth-hint').hidden = mode !== 'register';
+      document.getElementById('auth-password').autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+      document.querySelectorAll('.auth-tab').forEach(tab => {
+        const active = tab.dataset.authMode === mode;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+      });
+    }
+
+    function showApplication(user) {
+      activeUsername = user.username;
+      viewRevision++;
+      document.getElementById('auth-screen').hidden = true;
+      document.getElementById('app-shell').hidden = false;
+      document.getElementById('account-name').textContent = user.username;
+      refresh();
+    }
+
+    async function initialize() {
+      try {
+        const user = await api.GetSession();
+        if (user) showApplication(user);
+        else showAuth('login');
+      } catch (error) {
+        showAuth('login');
+        document.getElementById('auth-error').textContent = String(error);
+      }
+    }
+
+    async function refresh() {
+      const username = activeUsername;
+      const revision = viewRevision;
+      if (!username) return;
+      try {
+        const [courses, stats] = await Promise.all([api.GetCourses(username), api.GetStats(username)]);
+        if (activeUsername !== username || viewRevision !== revision) return;
+        state.courses = courses || [];
+        document.getElementById('stat-total').textContent = stats.total;
+        document.getElementById('stat-active').textContent = stats.inProgress;
+        document.getElementById('stat-done').textContent = stats.completed;
+        render();
+      } catch (error) {
+        if (activeUsername === username && viewRevision === revision) {
+          showToast(`Не удалось загрузить данные: ${error}`);
+        }
+      }
+    }
+
+    function render() {
+      const query = state.query.toLocaleLowerCase('ru');
+      const visible = state.courses.filter(course => {
+        const matchesFilter = state.filter === 'all' || (state.filter === 'done' ? course.completed : !course.completed);
+        const matchesQuery = `${course.title} ${course.description} ${course.category}`.toLocaleLowerCase('ru').includes(query);
+        return matchesFilter && matchesQuery;
+      });
+      list.innerHTML = visible.map((course, index) => `
+        <article class="course" style="animation-delay:${Math.min(index * 35, 175)}ms">
+          <div><h2 class="course-title">${escapeHTML(course.title)}</h2><p class="course-description">${escapeHTML(course.description)}</p>
+            <div class="meta"><span class="tag">${escapeHTML(course.category)}</span><span class="tag level">${escapeHTML(course.level)}</span><span class="duration"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${course.duration} ч</span></div>
+          </div>
+          <div class="course-actions"><span class="status ${course.completed ? 'done' : ''}">${course.completed ? 'Завершён' : 'В процессе'}</span><button class="icon-button" type="button" data-action="toggle" data-id="${course.id}" aria-label="${course.completed ? 'Вернуть в процесс' : 'Отметить завершённым'}" title="${course.completed ? 'Вернуть в процесс' : 'Отметить завершённым'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></button><button class="icon-button delete" type="button" data-action="delete" data-id="${course.id}" aria-label="Удалить курс" title="Удалить курс"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/></svg></button></div>
+        </article>`).join('');
+      list.style.display = visible.length ? 'grid' : 'none';
+      empty.style.display = visible.length ? 'none' : 'block';
+      const noCourses = state.courses.length === 0;
+      document.getElementById('empty-title').textContent = noCourses ? 'Пока нет курсов' : 'Ничего не найдено';
+      document.getElementById('empty-copy').textContent = noCourses ? 'Добавьте первый курс, чтобы начать свой учебный план.' : 'Измените запрос или выберите другой фильтр.';
+    }
+
+    document.querySelectorAll('.auth-tab').forEach(tab => tab.addEventListener('click', () => showAuth(tab.dataset.authMode)));
+    document.getElementById('auth-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      const form = new FormData(formElement);
+      const username = form.get('username');
+      const password = form.get('password');
+      const errorElement = document.getElementById('auth-error');
+      errorElement.textContent = '';
+      if (authMode === 'register' && password !== form.get('confirm')) {
+        errorElement.textContent = 'Пароли не совпадают.';
+        return;
+      }
+      try {
+        const user = authMode === 'register'
+          ? await api.Register(username, password)
+          : await api.Login(username, password);
+        formElement.reset();
+        showApplication(user);
+      } catch (error) {
+        errorElement.textContent = error?.message || String(error);
+      }
+    });
+    document.getElementById('logout').addEventListener('click', async () => {
+      try {
+        await api.Logout();
+        state.courses = [];
+        showAuth('login');
+      } catch (error) {
+        showToast(`Не удалось выйти из аккаунта: ${error}`);
+      }
+    });
+    document.getElementById('open-form').addEventListener('click', () => dialog.showModal());
+    document.getElementById('close-form').addEventListener('click', () => dialog.close());
+    document.getElementById('cancel-form').addEventListener('click', () => dialog.close());
+    function closeDeleteDialog() {
+      pendingDeleteID = null;
+      pendingDeleteUsername = null;
+      deleteDialog.close();
+    }
+    document.getElementById('close-delete').addEventListener('click', closeDeleteDialog);
+    document.getElementById('cancel-delete').addEventListener('click', closeDeleteDialog);
+    deleteDialog.addEventListener('cancel', () => {
+      pendingDeleteID = null;
+      pendingDeleteUsername = null;
+    });
+    document.getElementById('confirm-delete').addEventListener('click', async () => {
+      const courseID = pendingDeleteID;
+      const username = pendingDeleteUsername;
+      if (courseID === null || !username) return;
+      pendingDeleteID = null;
+      pendingDeleteUsername = null;
+      deleteDialog.close();
+      try {
+        await api.DeleteCourse(courseID, username);
+        await refresh();
+        showToast('Курс удалён');
+      } catch (error) {
+        showToast(`Не удалось удалить курс: ${error}`);
+      }
+    });
+    document.getElementById('search').addEventListener('input', event => { state.query = event.target.value; render(); });
+    document.querySelectorAll('.filter').forEach(button => button.addEventListener('click', () => {
+      document.querySelector('.filter.active').classList.remove('active');
+      button.classList.add('active');
+      state.filter = button.dataset.filter;
+      render();
+    }));
+    document.getElementById('course-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      const form = new FormData(formElement);
+      const username = activeUsername;
+      if (!username) return;
+      try {
+        await api.AddCourse(form.get('title'), form.get('description'), form.get('category'), form.get('level'), Number(form.get('duration')), username);
+        formElement.reset();
+        dialog.close();
+        await refresh();
+        showToast('Курс добавлен');
+      } catch (error) {
+        showToast(`Не удалось добавить курс: ${error}`);
+      }
+    });
+    list.addEventListener('click', async event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const course = state.courses.find(item => item.id === Number(button.dataset.id));
+      if (!course) return;
+      const username = activeUsername;
+      if (!username) return;
+      try {
+        if (button.dataset.action === 'toggle') {
+          await api.UpdateCompletion(course.id, !course.completed, username);
+          showToast(course.completed ? 'Курс возвращён в процесс' : 'Курс завершён');
+        } else {
+          pendingDeleteID = course.id;
+          pendingDeleteUsername = username;
+          document.getElementById('delete-copy').textContent = `Удалить курс «${course.title}»?`;
+          deleteDialog.showModal();
+          return;
+        }
+        await refresh();
+      } catch (error) {
+        showToast(`Не удалось обновить курс: ${error}`);
+      }
+    });
+    initialize();
+  </script>
+</body>
+</html>
